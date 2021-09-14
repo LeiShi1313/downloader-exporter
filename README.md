@@ -20,7 +20,7 @@ downloader-exporter -c CONFIG_FILE_PATH -p 9000
 Another option is run it in a docker container.
 
 ```
-docker run -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -p 9000:9000 leishi1313/downloader-exporter
+docker run -d -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -p 9000:9000 leishi1313/downloader-exporter
 ```
 Add this to your prometheus.yml
 ```
@@ -40,7 +40,7 @@ downloader-exporter -c CONFIG_FILE_PATH -p 9000 --multi true
 
 With docker
 ```
-docker run -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -e USE_MULTI_PORTS=true -p 9000-9010:9000-9010 leishi1313/downloader-exporter
+docker run -d -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -e USE_MULTI_PORTS=true -p 9000-9010:9000-9010 leishi1313/downloader-exporter
 ```
 
 # Config file
