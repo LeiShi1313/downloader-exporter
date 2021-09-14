@@ -1,2 +1,44 @@
 # downloader-exporter
-A prometheus exporter for torrent downloader like qbittorrent/transmission/deluge
+
+A prometheus exporter for qBitorrent/Transmission/Deluge. Get metrics from multiple servers and offers them in a prometheus format.
+
+
+## How to use it
+
+You can install this exporter with the following command:
+
+```bash
+pip3 install downloader-exporter
+```
+
+Then you can run it with
+
+```
+downloader-exporter -c CONFIG_FILE_PATH -p 9000
+```
+
+Another option is run it in a docker container.
+
+```
+docker run -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -p 9000:9000 leishi1313/downloader-exporter
+```
+Add this to your prometheus.yml
+```
+  - job_name: "downloader_exporter"
+    static_configs:
+        - targets: ['yourdownloaderexporter:port']
+```
+
+### The exporter is running too slow
+
+You can use an options to expose multiple ports for each downloader you're watching. Then the exporter will open a range of ports starting from the one you set, each port for each downloader
+
+With command line
+```
+downloader-exporter -c CONFIG_FILE_PATH -p 9000 --multi true
+```
+
+With docker
+```
+docker run -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -e USE_MULTI_PORTS=true -p 9000-9010:9000-9010 leishi1313/downloader-exporter
+```

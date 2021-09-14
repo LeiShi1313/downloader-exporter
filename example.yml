@@ -1,0 +1,29 @@
+qb:
+    client: qbittorrent
+    host: https://qb.example.com
+    username: USERNAME
+    password: PASSWORD
+
+qb2:
+    client: qbittorrent
+    host: qb.example.com:8085
+    username: USERNAME
+    password: PASSWORD
+
+de:
+    client: deluge
+    host: de.example.com:58846
+    username: USERNAME
+    password: PASSWORD
+
+tr:
+    client: transmission
+    host: https://tr.example.com
+    username: USERNAME
+    password: PASSWORD
+
+tr2:
+    client: transmission
+    host: tr.example.com:9091
+    username: USERNAME
+    password: PASSWORD
