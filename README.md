@@ -55,4 +55,4 @@ Simplely clone this project, add or edit `config.yml`, then run `docker-compose 
 
 You can add a new dashboard with ID `15006`, the dashboard should look like
 
-![](./grafana/screenshot.png)
+![](./grafana/screenshot.jpg)
