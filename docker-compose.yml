@@ -1,0 +1,38 @@
+version: '3.4'
+services:
+  exporter:
+    image: leishi1313/downloader-exporter
+    container_name: downloader-exporter
+    volumes:
+        - ./config.yml:/config/config.yml
+    ports: 
+        - 9000:9000
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    hostname: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    hostname: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data:/var/lib/grafana
+      - ./grafana.ini:/etc/grafana/grafana.ini
+    environment:
+      GF_RENDERING_SERVER_URL: http://renderer:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/
+      GF_LOG_FILTERS: rendering:debug
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - 8081
+    environment:
+      ENABLE_METRICS: 'true'

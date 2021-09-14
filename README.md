@@ -42,3 +42,17 @@ With docker
 ```
 docker run -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -e USE_MULTI_PORTS=true -p 9000-9010:9000-9010 leishi1313/downloader-exporter
 ```
+
+# Config file
+
+The config file is compatible with [autoremove-torrents](https://github.com/jerrymakesjelly/autoremove-torrents), you can also refer to `example.yml` to see how to write it.
+
+# Grafana
+
+You can use the provided `docker-compose.yml` to host your own stack of `Grafana`/`Prometheus`/`downloader-exporter`.
+
+Simplely clone this project, add or edit `config.yml`, then run `docker-compose up -d`.
+
+You can add a new dashboard with ID `15006`, the dashboard should look like
+
+![](./grafana/screenshot.png)
