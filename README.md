@@ -51,8 +51,15 @@ The config file is compatible with [autoremove-torrents](https://github.com/jerr
 
 You can use the provided `docker-compose.yml` to host your own stack of `Grafana`/`Prometheus`/`downloader-exporter`.
 
-Simplely clone this project, add or edit `config.yml`, then run `docker-compose up -d`.
+Simplely clone this project, add or edit `config.yml`, then start the docker-compose:
 
-You can add a new dashboard with ID `15006`, the dashboard should look like
+```shell
+cp example.yml config.yml
+docker-compose up -d
+```
+
+Use `localhost:3000` and `admin`/`admin` to access the dashboard.
+
+First you will need to add a data source, select `Prometheus` with URL `prometheus:9090`, Then go and add a new dashboard with ID `15006`, the dashboard should look like
 
 ![](./grafana/screenshot.jpg)

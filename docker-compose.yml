@@ -24,7 +24,6 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./data:/var/lib/grafana
       - ./grafana.ini:/etc/grafana/grafana.ini
     environment:
       GF_RENDERING_SERVER_URL: http://renderer:8081/render
