@@ -36,7 +36,7 @@ class QbittorrentMetricsCollector():
             self.version = self.client.app.version
         except Exception as e:
             logger.error(f"Couldn't get server info: {e}")
-            return None
+            return []
 
         metrics = self.get_metrics()
 
