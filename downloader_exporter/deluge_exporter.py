@@ -118,7 +118,8 @@ class DelugeMetricsCollector():
             torrents = {}
         counter = defaultdict(lambda: defaultdict(int))
         for val in torrents.values():
-            if not (label := val.get(b'label').decode()):
+            label = val.get(b'label', b'').decode()
+            if not label:
                 label = 'Uncategorized'
             counter[label][val.get(b'state').decode()] += 1
 
