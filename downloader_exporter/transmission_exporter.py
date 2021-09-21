@@ -12,11 +12,12 @@ DEFAULT_PORT = 9091
 
 class TransmissionMetricsCollector():
 
-    def __init__(self, name: str, host: str, username: str, password: str, **kwargs):
+    def __init__(self, name: str, host: str, username: str, password: str, timeout: int = 4, **kwargs):
         self.name = name
         self.host = host
         self.username = username
         self.password = password
+        self.timeout = timeout
         self.version = None
 
     @property
@@ -27,7 +28,8 @@ class TransmissionMetricsCollector():
             port=port,
             username=self.username,
             password=self.password,
-            protocol='https' if scheme == 'https' or port == 443 else 'http')
+            protocol='https' if scheme == 'https' or port == 443 else 'http',
+            timeout=self.timeout)
 
     def describe(self):
         return [AttrDict({'name': self.name, 'type': 'info'})]
@@ -62,13 +64,14 @@ class TransmissionMetricsCollector():
             stat = session.cumulative_stats
         except Exception as e:
             logger.error(f"Can not get client session: {e}")
+            self.version = ''
             session = AttrDict()
             stat = {}
 
         return [
             {
                 "name": "downloader_up",
-                "value": self.version is not None,
+                "value": self.version != '',
                 "help": "Whether if server is alive or not",
             },
             {
