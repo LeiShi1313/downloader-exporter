@@ -12,23 +12,19 @@ DEFAULT_PORT = 58846
 
 class DelugeMetricsCollector():
 
-    def __init__(self, name: str, host: str, username: str, password: str, retry:int = 3, **kwargs):
+    def __init__(self, name: str, host: str, username: str, password: str, **kwargs):
         self.name = name
         self.host = host
         self.username = username
         self.password = password
-        self.retry = retry
         self.version = ''
         self.lt_version = ''
 
-    def call(self, method, *args, **kwargs):
-        for _ in range(self.retry):
-            try:
-                return self.client.call(method, *args, **kwargs)
-            except FailedToReconnectException as e:
-                # 1 second delay between calls
-                time.sleep(0.3)
-        logger.error(f"Cannot connect to deluge client {self.name} after {self.retry} times.")
+    def call(self, client, method, *args, **kwargs):
+        try:
+            return client.call(method, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Cannot connect to deluge client {self.name}, method: {method}: {e}")
         return ''
 
     @property
@@ -38,7 +34,8 @@ class DelugeMetricsCollector():
             host=host,
             port=port,
             username=self.username,
-            password=self.password)
+            password=self.password,
+            decode_utf8=True)
 
     def describe(self):
         return [AttrDict({'name': self.name, 'type': 'info'})]
@@ -62,18 +59,19 @@ class DelugeMetricsCollector():
 
     def get_metrics(self):
         metrics = []
-        metrics.extend(self.get_status_metrics())
-        metrics.extend(self.get_torrent_metrics())
+        with self.client as client:
+            metrics.extend(self.get_status_metrics(client))
+            metrics.extend(self.get_torrent_metrics(client))
         return metrics
 
-    def get_status_metrics(self):
-        self.version = self.call('daemon.get_version')
+    def get_status_metrics(self, client):
+        self.version = self.call(client, 'daemon.info')
         if self.version:
-            self.version = self.version.decode()
-        self.lt_version = self.call('core.get_libtorrent_version')
+            self.version = self.version
+        self.lt_version = self.call(client, 'core.get_libtorrent_version')
         if self.lt_version:
-            self.lt_version = self.lt_version.decode()
-        status = self.call('core.get_session_status', [
+            self.lt_version = self.lt_version
+        status = self.call(client, 'core.get_session_status', [
             'download_rate',
             'upload_rate',
             'total_download',
@@ -90,38 +88,38 @@ class DelugeMetricsCollector():
             },
             {
                 "name": "downloader_download_bytes_total",
-                "value": status.get(b"total_download", 0),
+                "value": status.get("total_download", 0),
                 "help": "Data downloaded this session (bytes)",
                 "type": "counter"
             },
             {
                 "name": "downloader_download_speed_bytes",
-                "value": status.get(b"download_rate", 0),
+                "value": status.get("download_rate", 0),
                 "help": "Data download speed (bytes)",
             },
             {
                 "name": "downloader_upload_bytes_total",
-                "value": status.get(b"total_upload", 0),
+                "value": status.get("total_upload", 0),
                 "help": "Data uploaded this session (bytes)",
                 "type": "counter"
             },
             {
                 "name": "downloader_upload_speed_bytes",
-                "value": status.get(b"upload_rate", 0),
+                "value": status.get("upload_rate", 0),
                 "help": "Data upload speed (bytes)",
             }
         ]
 
-    def get_torrent_metrics(self):
-        torrents = self.call('core.get_torrents_status', {}, ['state', 'label'])
+    def get_torrent_metrics(self, client):
+        torrents = self.call(client, 'core.get_torrents_status', {}, ['state', 'label'])
         if not torrents:
             torrents = {}
         counter = defaultdict(lambda: defaultdict(int))
         for val in torrents.values():
-            label = val.get(b'label', b'').decode()
+            label = val.get('label', '')
             if not label:
                 label = 'Uncategorized'
-            counter[label][val.get(b'state').decode()] += 1
+            counter[label][val.get('state')] += 1
 
         metrics = []
         for label in counter.keys():
