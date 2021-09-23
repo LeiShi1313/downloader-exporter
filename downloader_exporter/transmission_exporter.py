@@ -139,7 +139,11 @@ class TransmissionMetricsCollector:
         for t in torrents:
             tracker = urlparse(
                 next(
-                    (t.get("announce", "") for t in t._fields["trackerStats"].value), ""
+                    (
+                        t.get("announce", "https://unknown.tracker")
+                        for t in t._fields["trackerStats"].value
+                    ),
+                    "https://unknown.tracker",
                 )
             ).netloc
             category = ""

@@ -140,16 +140,15 @@ class DelugeMetricsCollector:
         counter = Counter()
         tracker_counter = defaultdict(float)
         for val in torrents.values():
+            tracker = urlparse(val.get("tracker", "https://unknown.tracker")).netloc
             counter[
                 TorrentStat(
                     TorrentStatus.parse_de(val.get("state", "")).value,
                     val.get("label", "Uncategorized"),
-                    urlparse(val.get("tracker", "")).netloc,
+                    tracker,
                 )
             ] += 1
-            tracker_counter[urlparse(val.get("tracker", "")).netloc] += val.get(
-                "total_uploaded", 0.0
-            )
+            tracker_counter[tracker] += val.get("total_uploaded", 0.0)
 
         metrics = []
         for t, count in counter.items():

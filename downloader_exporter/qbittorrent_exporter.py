@@ -50,7 +50,7 @@ class QbittorrentMetricsCollector:
             metrics = self.get_metrics()
         except Exception as e:
             logger.error(f"[{self.name}] Couldn't get server info: {e}")
-            self.version = ''
+            self.version = ""
             metrics = [
                 {
                     "name": "downloader_up",
@@ -139,16 +139,15 @@ class QbittorrentMetricsCollector:
         counter = Counter()
         tracker_counter = defaultdict(float)
         for torrent in torrents:
+            tracker = urlparse(torrent.get("tracker", "https://unknown.tracker")).netloc
             counter[
                 TorrentStat(
                     TorrentStatus.parse_qb(torrent["state"]).value,
                     torrent.get("category", "Uncategorized"),
-                    urlparse(torrent.get("tracker", "")).netloc,
+                    tracker,
                 )
             ] += 1
-            tracker_counter[urlparse(torrent.get("tracker", "")).netloc] += torrent.get(
-                "uploaded", 0.0
-            )
+            tracker_counter[tracker] += torrent.get("uploaded", 0.0)
 
         metrics = []
         for t, count in counter.items():
