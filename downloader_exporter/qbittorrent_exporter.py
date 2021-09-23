@@ -1,11 +1,16 @@
+from collections import Counter
+from urllib.parse import urlparse
+
 from loguru import logger
 from attrdict import AttrDict
 from qbittorrentapi import Client, TorrentStates
 from qbittorrentapi.exceptions import APIConnectionError
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 
+from downloader_exporter.constants import TorrentStatus, TorrentStat
 
-class QbittorrentMetricsCollector():
+
+class QbittorrentMetricsCollector:
     TORRENT_STATUSES = [
         "downloading",
         "uploading",
@@ -15,7 +20,15 @@ class QbittorrentMetricsCollector():
         "paused",
     ]
 
-    def __init__(self, name: str, host: str, username: str, password: str, verify_ssl: bool = False, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        host: str,
+        username: str,
+        password: str,
+        verify_ssl: bool = False,
+        **kwargs,
+    ):
         self.name = name
         self.host = host
         self.username = username
@@ -23,14 +36,14 @@ class QbittorrentMetricsCollector():
         self.verify_ssl = verify_ssl
 
     def describe(self):
-        return [AttrDict({'name': self.name, 'type': 'info'})]
+        return [AttrDict({"name": self.name, "type": "info"})]
 
     def collect(self):
         self.client = Client(
             host=self.host,
             username=self.username,
             password=self.password,
-            VERIFY_WEBUI_CERTIFICATE=self.verify_ssl
+            VERIFY_WEBUI_CERTIFICATE=self.verify_ssl,
         )
         try:
             self.version = self.client.app.version
@@ -44,7 +57,15 @@ class QbittorrentMetricsCollector():
             name = metric["name"]
             value = metric["value"]
             help_text = metric.get("help", "")
-            labels = {**metric.get("labels", {}), **{"name": self.name, "version": self.version, "client": "qbittorrent", "host": self.host}}
+            labels = {
+                **metric.get("labels", {}),
+                **{
+                    "name": self.name,
+                    "version": self.version,
+                    "client": "qbittorrent",
+                    "host": self.host,
+                },
+            }
             metric_type = metric.get("type", "gauge")
 
             if metric_type == "counter":
@@ -81,7 +102,7 @@ class QbittorrentMetricsCollector():
                 "name": "downloader_download_bytes_total",
                 "value": response.get("dl_info_data", 0),
                 "help": "Data downloaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_download_speed_bytes",
@@ -92,7 +113,7 @@ class QbittorrentMetricsCollector():
                 "name": "downloader_upload_bytes_total",
                 "value": response.get("up_info_data", 0),
                 "help": "Data uploaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_upload_speed_bytes",
@@ -109,24 +130,29 @@ class QbittorrentMetricsCollector():
             logger.error(f"Couldn't fetch torrents: {e}")
             return []
 
-        metrics = []
-        categories.Uncategorized = AttrDict({'name': 'Uncategorized', 'savePath': ''})
-        for category in categories:
-            category_torrents = [t for t in torrents if t['category'] == category or (category == "Uncategorized" and t['category'] == "")]
+        counter = Counter()
+        for torrent in torrents:
+            counter[
+                TorrentStat(
+                    TorrentStatus.parse_qb(torrent["state"]).value,
+                    torrent.get("category", "Uncategorized"),
+                    urlparse(torrent.get("tracker", "")).netloc,
+                )
+            ] += 1
 
-            for status in self.TORRENT_STATUSES:
-                status_prop = f"is_{status}"
-                status_torrents = [
-                    t for t in category_torrents if getattr(TorrentStates, status_prop).fget(TorrentStates(t['state']))
-                ]
-                metrics.append({
+        metrics = []
+        for t, count in counter.items():
+            metrics.append(
+                {
                     "name": "downloader_torrents_count",
-                    "value": len(status_torrents),
+                    "value": count,
                     "labels": {
-                        "status": status,
-                        "category": category,
+                        "status": t.status,
+                        "category": t.category,
+                        "tracker": t.tracker,
                     },
-                    "help": f"Number of torrents in status {status} under category {category}"
-                })
+                    "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
+                }
+            )
 
         return metrics

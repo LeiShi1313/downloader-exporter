@@ -1,5 +1,5 @@
 import time
-from collections import defaultdict
+from collections import Counter
 
 from loguru import logger
 from attrdict import AttrDict
@@ -7,12 +7,21 @@ from transmission_rpc import Client
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 
 from downloader_exporter.utils import url_parse
+from downloader_exporter.constants import TorrentStatus
 
 DEFAULT_PORT = 9091
 
-class TransmissionMetricsCollector():
 
-    def __init__(self, name: str, host: str, username: str, password: str, timeout: int = 4, **kwargs):
+class TransmissionMetricsCollector:
+    def __init__(
+        self,
+        name: str,
+        host: str,
+        username: str,
+        password: str,
+        timeout: int = 4,
+        **kwargs,
+    ):
         self.name = name
         self.host = host
         self.username = username
@@ -28,11 +37,12 @@ class TransmissionMetricsCollector():
             port=port,
             username=self.username,
             password=self.password,
-            protocol='https' if scheme == 'https' or port == 443 else 'http',
-            timeout=self.timeout)
+            protocol="https" if scheme == "https" or port == 443 else "http",
+            timeout=self.timeout,
+        )
 
     def describe(self):
-        return [AttrDict({'name': self.name, 'type': 'info'})]
+        return [AttrDict({"name": self.name, "type": "info"})]
 
     def collect(self):
         metrics = self.get_metrics()
@@ -41,7 +51,15 @@ class TransmissionMetricsCollector():
             name = metric["name"]
             value = metric["value"]
             help_text = metric.get("help", "")
-            labels = {**metric.get("labels", {}), **{"name": self.name, "version": self.version, "client": "deluge", "host": self.host}}
+            labels = {
+                **metric.get("labels", {}),
+                **{
+                    "name": self.name,
+                    "version": self.version,
+                    "client": "deluge",
+                    "host": self.host,
+                },
+            }
             metric_type = metric.get("type", "gauge")
 
             if metric_type == "counter":
@@ -64,60 +82,65 @@ class TransmissionMetricsCollector():
             stat = session.cumulative_stats
         except Exception as e:
             logger.error(f"Can not get client session: {e}")
-            self.version = ''
+            self.version = ""
             session = AttrDict()
             stat = {}
 
         return [
             {
                 "name": "downloader_up",
-                "value": self.version != '',
+                "value": self.version != "",
                 "help": "Whether if server is alive or not",
             },
             {
                 "name": "downloader_download_bytes_total",
-                "value": stat.get('downloadedBytes', 0),
+                "value": stat.get("downloadedBytes", 0),
                 "help": "Data downloaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_download_speed_bytes",
-                "value": getattr(session, 'downloadSpeed', 0),
+                "value": getattr(session, "downloadSpeed", 0),
                 "help": "Data download speed (bytes)",
             },
             {
                 "name": "downloader_upload_bytes_total",
-                "value": stat.get('uploadedBytes', 0),
+                "value": stat.get("uploadedBytes", 0),
                 "help": "Data uploaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_upload_speed_bytes",
-                "value": getattr(session, 'uploadSpeed', 0),
+                "value": getattr(session, "uploadSpeed", 0),
                 "help": "Data upload speed (bytes)",
-            }
+            },
         ]
 
     def get_torrent_metrics(self):
         try:
-            torrents = self.client.get_torrents(arguments=['name', 'status', 'isFinished', 'isStalled'])
+            torrents = self.client.get_torrents(
+                arguments=["name", "status", "tracker", "isFinished", "isStalled"]
+            )
         except Exception as e:
             logger.error(f"Can not get client torrents: {e}")
             torrents = []
 
-        counter = defaultdict(int)
+        counter = Counter()
         for t in torrents:
-            counter[t.status] += 1
+            counter[TorrentStatus.parse_tr(t.status).value] += 1
 
         metrics = []
-        for status in counter.keys():
-            metrics.append({
-                "name": "downloader_torrents_count",
-                "value": counter[status],
-                "labels": {
-                    "status": status,
-                    "category": "Uncategorized"
-                },
-                "help": f"Number of torrents in status {status}"
-            })
+        for status, count in counter.items():
+            metrics.append(
+                {
+                    "name": "downloader_torrents_count",
+                    "value": count,
+                    "labels": {
+                        "status": status,
+                        "category": "Uncategorized",
+                        "tracker": "",
+                    },
+                    "help": f"Number of torrents in status {status}",
+                }
+            )
         return metrics

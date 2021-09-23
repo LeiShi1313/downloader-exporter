@@ -1,5 +1,6 @@
 import time
-from collections import defaultdict
+from collections import Counter
+from urllib.parse import urlparse
 
 from loguru import logger
 from attrdict import AttrDict
@@ -7,25 +8,28 @@ from deluge_client import DelugeRPCClient, FailedToReconnectException
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 
 from downloader_exporter.utils import url_parse
+from downloader_exporter.constants import TorrentStatus, TorrentStat
 
 DEFAULT_PORT = 58846
 
-class DelugeMetricsCollector():
 
+class DelugeMetricsCollector:
     def __init__(self, name: str, host: str, username: str, password: str, **kwargs):
         self.name = name
         self.host = host
         self.username = username
         self.password = password
-        self.version = ''
-        self.lt_version = ''
+        self.version = ""
+        self.lt_version = ""
 
     def call(self, client, method, *args, **kwargs):
         try:
             return client.call(method, *args, **kwargs)
         except Exception as e:
-            logger.error(f"Cannot connect to deluge client {self.name}, method: {method}: {e}")
-        return ''
+            logger.error(
+                f"Cannot connect to deluge client {self.name}, method: {method}: {e}"
+            )
+        return ""
 
     @property
     def client(self):
@@ -35,10 +39,11 @@ class DelugeMetricsCollector():
             port=port,
             username=self.username,
             password=self.password,
-            decode_utf8=True)
+            decode_utf8=True,
+        )
 
     def describe(self):
-        return [AttrDict({'name': self.name, 'type': 'info'})]
+        return [AttrDict({"name": self.name, "type": "info"})]
 
     def collect(self):
         metrics = self.get_metrics()
@@ -47,7 +52,16 @@ class DelugeMetricsCollector():
             name = metric["name"]
             value = metric["value"]
             help_text = metric.get("help", "")
-            labels = {**metric.get("labels", {}), **{"name": self.name, "version": self.version, "lt_version": self.lt_version, "client": "deluge", "host": self.host}}
+            labels = {
+                **metric.get("labels", {}),
+                **{
+                    "name": self.name,
+                    "version": self.version,
+                    "lt_version": self.lt_version,
+                    "client": "deluge",
+                    "host": self.host,
+                },
+            }
             metric_type = metric.get("type", "gauge")
 
             if metric_type == "counter":
@@ -65,18 +79,22 @@ class DelugeMetricsCollector():
         return metrics
 
     def get_status_metrics(self, client):
-        self.version = self.call(client, 'daemon.info')
+        self.version = self.call(client, "daemon.info")
         if self.version:
             self.version = self.version
-        self.lt_version = self.call(client, 'core.get_libtorrent_version')
+        self.lt_version = self.call(client, "core.get_libtorrent_version")
         if self.lt_version:
             self.lt_version = self.lt_version
-        status = self.call(client, 'core.get_session_status', [
-            'download_rate',
-            'upload_rate',
-            'total_download',
-            'total_upload',
-        ])
+        status = self.call(
+            client,
+            "core.get_session_status",
+            [
+                "download_rate",
+                "upload_rate",
+                "total_download",
+                "total_upload",
+            ],
+        )
         if not status:
             status = {}
 
@@ -90,7 +108,7 @@ class DelugeMetricsCollector():
                 "name": "downloader_download_bytes_total",
                 "value": status.get("total_download", 0),
                 "help": "Data downloaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_download_speed_bytes",
@@ -101,36 +119,43 @@ class DelugeMetricsCollector():
                 "name": "downloader_upload_bytes_total",
                 "value": status.get("total_upload", 0),
                 "help": "Data uploaded this session (bytes)",
-                "type": "counter"
+                "type": "counter",
             },
             {
                 "name": "downloader_upload_speed_bytes",
                 "value": status.get("upload_rate", 0),
                 "help": "Data upload speed (bytes)",
-            }
+            },
         ]
 
     def get_torrent_metrics(self, client):
-        torrents = self.call(client, 'core.get_torrents_status', {}, ['state', 'label'])
+        torrents = self.call(
+            client, "core.get_torrents_status", {}, ["state", "label", "tracker"]
+        )
         if not torrents:
-            torrents = {}
-        counter = defaultdict(lambda: defaultdict(int))
+            return []
+        counter = Counter()
         for val in torrents.values():
-            label = val.get('label', '')
-            if not label:
-                label = 'Uncategorized'
-            counter[label][val.get('state')] += 1
+            counter[
+                TorrentStat(
+                    TorrentStatus.parse_de(val.get("state", "")).value,
+                    val.get("label", "Uncategorized"),
+                    urlparse(val.get("tracker", "")).netloc,
+                )
+            ] += 1
 
         metrics = []
-        for label in counter.keys():
-            for state in counter[label].keys():
-                metrics.append({
+        for t, count in counter.items():
+            metrics.append(
+                {
                     "name": "downloader_torrents_count",
-                    "value": counter[label][state],
+                    "value": count,
                     "labels": {
-                        "status": state,
-                        "category": label
+                        "status": t.status,
+                        "category": t.category,
+                        "tracker": t.tracker,
                     },
-                    "help": f"Number of torrents in status {state} under category {label}"
-                })
+                    "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
+                }
+            )
         return metrics
