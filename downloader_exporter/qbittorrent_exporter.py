@@ -47,11 +47,17 @@ class QbittorrentMetricsCollector:
         )
         try:
             self.version = self.client.app.version
+            metrics = self.get_metrics()
         except Exception as e:
             logger.error(f"[{self.name}] Couldn't get server info: {e}")
-            return []
-
-        metrics = self.get_metrics()
+            self.version = ''
+            metrics = [
+                {
+                    "name": "downloader_up",
+                    "value": False,
+                    "help": "Whether if server is alive or not",
+                }
+            ]
 
         for metric in metrics:
             name = metric["name"]
