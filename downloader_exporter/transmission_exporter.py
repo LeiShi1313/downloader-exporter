@@ -1,5 +1,6 @@
 import time
-from collections import Counter
+from urllib.parse import urlparse
+from collections import Counter, defaultdict
 
 from loguru import logger
 from attrdict import AttrDict
@@ -7,7 +8,7 @@ from transmission_rpc import Client
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 
 from downloader_exporter.utils import url_parse
-from downloader_exporter.constants import TorrentStatus
+from downloader_exporter.constants import TorrentStatus, TorrentStat
 
 DEFAULT_PORT = 9091
 
@@ -19,7 +20,7 @@ class TransmissionMetricsCollector:
         host: str,
         username: str,
         password: str,
-        timeout: int = 4,
+        timeout: int = 60,
         **kwargs,
     ):
         self.name = name
@@ -119,28 +120,61 @@ class TransmissionMetricsCollector:
     def get_torrent_metrics(self):
         try:
             torrents = self.client.get_torrents(
-                arguments=["name", "status", "tracker", "isFinished", "isStalled"]
+                arguments=[
+                    "name",
+                    "status",
+                    "labels",
+                    "trackerStats",
+                    "isFinished",
+                    "isStalled",
+                    "uploadedEver",
+                ]
             )
         except Exception as e:
             logger.error(f"Can not get client torrents: {e}")
             torrents = []
 
         counter = Counter()
+        tracker_counter = defaultdict(float)
         for t in torrents:
-            counter[TorrentStatus.parse_tr(t.status).value] += 1
+            tracker = urlparse(
+                next(
+                    (t.get("announce", "") for t in t._fields["trackerStats"].value), ""
+                )
+            ).netloc
+            counter[
+                TorrentStat(
+                    TorrentStatus.parse_tr(t.status).value,
+                    next((l for l in t._fields["labels"].value), ""),
+                    tracker,
+                )
+            ] += 1
+            tracker_counter[tracker] += t._fields["uploadedEver"].value
 
         metrics = []
-        for status, count in counter.items():
+        for t, count in counter.items():
             metrics.append(
                 {
                     "name": "downloader_torrents_count",
                     "value": count,
                     "labels": {
-                        "status": status,
-                        "category": "Uncategorized",
-                        "tracker": "",
+                        "status": t.status,
+                        "category": t.category,
+                        "tracker": t.tracker,
                     },
-                    "help": f"Number of torrents in status {status}",
+                    "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
+                }
+            )
+        for tracker, uploaded in tracker_counter.items():
+            metrics.append(
+                {
+                    "name": "downloader_tracker_upload_bytes_total",
+                    "type": "counter",
+                    "value": uploaded,
+                    "labels": {
+                        "tracker": t.tracker,
+                    },
+                    "help": f"Data uploaded to tracker {tracker}",
                 }
             )
         return metrics

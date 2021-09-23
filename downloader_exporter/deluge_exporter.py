@@ -1,6 +1,6 @@
 import time
-from collections import Counter
 from urllib.parse import urlparse
+from collections import Counter, defaultdict
 
 from loguru import logger
 from attrdict import AttrDict
@@ -130,11 +130,15 @@ class DelugeMetricsCollector:
 
     def get_torrent_metrics(self, client):
         torrents = self.call(
-            client, "core.get_torrents_status", {}, ["state", "label", "tracker"]
+            client,
+            "core.get_torrents_status",
+            {},
+            ["state", "label", "tracker", "total_uploaded"],
         )
         if not torrents:
             return []
         counter = Counter()
+        tracker_counter = defaultdict(float)
         for val in torrents.values():
             counter[
                 TorrentStat(
@@ -143,6 +147,9 @@ class DelugeMetricsCollector:
                     urlparse(val.get("tracker", "")).netloc,
                 )
             ] += 1
+            tracker_counter[urlparse(val.get("tracker", "")).netloc] += val.get(
+                "total_uploaded", 0.0
+            )
 
         metrics = []
         for t, count in counter.items():
@@ -156,6 +163,18 @@ class DelugeMetricsCollector:
                         "tracker": t.tracker,
                     },
                     "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
+                }
+            )
+        for tracker, uploaded in tracker_counter.items():
+            metrics.append(
+                {
+                    "name": "downloader_tracker_upload_bytes_total",
+                    "type": "counter",
+                    "value": uploaded,
+                    "labels": {
+                        "tracker": t.tracker,
+                    },
+                    "help": f"Data uploaded to tracker {tracker}",
                 }
             )
         return metrics

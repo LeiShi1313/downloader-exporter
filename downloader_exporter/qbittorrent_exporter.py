@@ -1,5 +1,5 @@
-from collections import Counter
 from urllib.parse import urlparse
+from collections import Counter, defaultdict
 
 from loguru import logger
 from attrdict import AttrDict
@@ -131,6 +131,7 @@ class QbittorrentMetricsCollector:
             return []
 
         counter = Counter()
+        tracker_counter = defaultdict(float)
         for torrent in torrents:
             counter[
                 TorrentStat(
@@ -139,6 +140,9 @@ class QbittorrentMetricsCollector:
                     urlparse(torrent.get("tracker", "")).netloc,
                 )
             ] += 1
+            tracker_counter[urlparse(torrent.get("tracker", "")).netloc] += torrent.get(
+                "uploaded", 0.0
+            )
 
         metrics = []
         for t, count in counter.items():
@@ -154,5 +158,16 @@ class QbittorrentMetricsCollector:
                     "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
                 }
             )
-
+        for tracker, uploaded in tracker_counter.items():
+            metrics.append(
+                {
+                    "name": "downloader_tracker_upload_bytes_total",
+                    "type": "counter",
+                    "value": uploaded,
+                    "labels": {
+                        "tracker": t.tracker,
+                    },
+                    "help": f"Data uploaded to tracker {tracker}",
+                }
+            )
         return metrics
