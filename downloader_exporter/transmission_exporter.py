@@ -142,10 +142,13 @@ class TransmissionMetricsCollector:
                     (t.get("announce", "") for t in t._fields["trackerStats"].value), ""
                 )
             ).netloc
+            category = ""
+            if "labels" in t._fields:
+                category = next((l for l in t._fields["labels"].value), "")
             counter[
                 TorrentStat(
                     TorrentStatus.parse_tr(t.status).value,
-                    next((l for l in t._fields["labels"].value), ""),
+                    category,
                     tracker,
                 )
             ] += 1
