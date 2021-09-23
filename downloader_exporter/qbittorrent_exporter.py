@@ -165,7 +165,7 @@ class QbittorrentMetricsCollector:
                     "type": "counter",
                     "value": uploaded,
                     "labels": {
-                        "tracker": t.tracker,
+                        "tracker": tracker,
                     },
                     "help": f"Data uploaded to tracker {tracker}",
                 }
