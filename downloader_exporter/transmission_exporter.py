@@ -82,7 +82,7 @@ class TransmissionMetricsCollector:
             self.version = session.version
             stat = session.cumulative_stats
         except Exception as e:
-            logger.error(f"Can not get client session: {e}")
+            logger.error(f"[{self.name}] Can not get client session: {e}")
             self.version = ""
             session = AttrDict()
             stat = {}
@@ -131,7 +131,7 @@ class TransmissionMetricsCollector:
                 ]
             )
         except Exception as e:
-            logger.error(f"Can not get client torrents: {e}")
+            logger.error(f"[{self.name}] Can not get client torrents: {e}")
             torrents = []
 
         counter = Counter()

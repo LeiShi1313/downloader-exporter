@@ -48,7 +48,7 @@ class QbittorrentMetricsCollector:
         try:
             self.version = self.client.app.version
         except Exception as e:
-            logger.error(f"Couldn't get server info: {e}")
+            logger.error(f"[{self.name}] Couldn't get server info: {e}")
             return []
 
         metrics = self.get_metrics()
@@ -90,7 +90,7 @@ class QbittorrentMetricsCollector:
         try:
             response = self.client.transfer.info
         except Exception as e:
-            logger.error(f"Couldn't get server info: {e}")
+            logger.error(f"[{self.name}] Couldn't get server info: {e}")
 
         return [
             {
@@ -127,7 +127,7 @@ class QbittorrentMetricsCollector:
             categories = self.client.torrent_categories.categories
             torrents = self.client.torrents.info()
         except Exception as e:
-            logger.error(f"Couldn't fetch torrents: {e}")
+            logger.error(f"[{self.name}] Couldn't fetch torrents: {e}")
             return []
 
         counter = Counter()

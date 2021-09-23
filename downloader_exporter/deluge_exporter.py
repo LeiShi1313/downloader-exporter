@@ -27,7 +27,7 @@ class DelugeMetricsCollector:
             return client.call(method, *args, **kwargs)
         except Exception as e:
             logger.error(
-                f"Cannot connect to deluge client {self.name}, method: {method}: {e}"
+                f"[{self.name}] Cannot connect to deluge client {self.name}, method: {method}: {e}"
             )
         return ""
 
