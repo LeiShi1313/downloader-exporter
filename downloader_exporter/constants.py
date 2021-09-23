@@ -71,7 +71,7 @@ class TorrentStatus(Enum):
             ('checking'): TorrentStatus.CHECKING,
             # (): TorrentStatus.ERRORED,
             # (): TorrentStatus.STALLED,
-            ('check_pending', 'download_pending', 'seed_pending'): TorrentStatus.QUEUED,
+            ('check pending', 'download pending', 'seed pending'): TorrentStatus.QUEUED,
             ('stopped'): TorrentStatus.PAUSED,
             # (): TorrentStatus.MOVING,
         }
