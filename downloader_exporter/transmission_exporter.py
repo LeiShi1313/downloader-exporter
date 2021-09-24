@@ -1,6 +1,6 @@
 import time
 from urllib.parse import urlparse
-from collections import Counter, defaultdict
+from collections import Counter
 
 from loguru import logger
 from attrdict import AttrDict
@@ -135,7 +135,7 @@ class TransmissionMetricsCollector:
             torrents = []
 
         counter = Counter()
-        tracker_counter = defaultdict(float)
+        metrics = []
         for t in torrents:
             tracker = urlparse(
                 next(
@@ -146,9 +146,9 @@ class TransmissionMetricsCollector:
                     "https://unknown.tracker",
                 )
             ).netloc
-            category = ""
+            category = "Uncategorized"
             if "labels" in t._fields:
-                category = next((l for l in t._fields["labels"].value), "")
+                category = next((l for l in t._fields["labels"].value), "Uncategorized")
             counter[
                 TorrentStat(
                     TorrentStatus.parse_tr(t.status).value,
@@ -156,9 +156,19 @@ class TransmissionMetricsCollector:
                     tracker,
                 )
             ] += 1
-            tracker_counter[tracker] += t._fields["uploadedEver"].value
+            metrics.append(
+                {
+                    "name": "downloader_tracker_torrent_upload_bytes_total",
+                    "type": "counter",
+                    "value": t._fields["uploadedEver"].value,
+                    "labels": {
+                        "torrent_name": t.name,
+                        "tracker": tracker,
+                    },
+                    "help": f"Data uploaded to tracker {tracker} for torrent {t.name}",
+                }
+            )
 
-        metrics = []
         for t, count in counter.items():
             metrics.append(
                 {
@@ -170,18 +180,6 @@ class TransmissionMetricsCollector:
                         "tracker": t.tracker,
                     },
                     "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
-                }
-            )
-        for tracker, uploaded in tracker_counter.items():
-            metrics.append(
-                {
-                    "name": "downloader_tracker_upload_bytes_total",
-                    "type": "counter",
-                    "value": uploaded,
-                    "labels": {
-                        "tracker": tracker,
-                    },
-                    "help": f"Data uploaded to tracker {tracker}",
                 }
             )
         return metrics

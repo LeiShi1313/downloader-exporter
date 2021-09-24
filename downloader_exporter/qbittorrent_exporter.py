@@ -1,5 +1,5 @@
 from urllib.parse import urlparse
-from collections import Counter, defaultdict
+from collections import Counter
 
 from loguru import logger
 from attrdict import AttrDict
@@ -136,8 +136,8 @@ class QbittorrentMetricsCollector:
             logger.error(f"[{self.name}] Couldn't fetch torrents: {e}")
             return []
 
+        metrics = []
         counter = Counter()
-        tracker_counter = defaultdict(float)
         for torrent in torrents:
             tracker = urlparse(torrent.get("tracker", "https://unknown.tracker")).netloc
             counter[
@@ -147,9 +147,20 @@ class QbittorrentMetricsCollector:
                     tracker,
                 )
             ] += 1
-            tracker_counter[tracker] += torrent.get("uploaded", 0.0)
+            torrent_name = torrent.get("name", "unknown")
+            metrics.append(
+                {
+                    "name": "downloader_tracker_torrent_upload_bytes_total",
+                    "type": "counter",
+                    "value": torrent.get("uploaded", 0.0),
+                    "labels": {
+                        "torrent_name": torrent_name,
+                        "tracker": tracker,
+                    },
+                    "help": f"Data uploaded to tracker {tracker} for torrent {torrent_name}",
+                }
+            )
 
-        metrics = []
         for t, count in counter.items():
             metrics.append(
                 {
@@ -161,18 +172,6 @@ class QbittorrentMetricsCollector:
                         "tracker": t.tracker,
                     },
                     "help": f"Number of torrents in status {t.status} under category {t.category} with tracker {t.tracker}",
-                }
-            )
-        for tracker, uploaded in tracker_counter.items():
-            metrics.append(
-                {
-                    "name": "downloader_tracker_upload_bytes_total",
-                    "type": "counter",
-                    "value": uploaded,
-                    "labels": {
-                        "tracker": tracker,
-                    },
-                    "help": f"Data uploaded to tracker {tracker}",
                 }
             )
         return metrics
