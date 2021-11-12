@@ -8,13 +8,37 @@ import faulthandler
 import yaml
 from loguru import logger
 from attrdict import AttrDict
-from prometheus_client import start_http_server
+from prometheus_client import start_http_server, Metric
 from prometheus_client.core import REGISTRY, CollectorRegistry
 
 from downloader_exporter.deluge_exporter import DelugeMetricsCollector
 from downloader_exporter.qbittorrent_exporter import QbittorrentMetricsCollector
 from downloader_exporter.transmission_exporter import TransmissionMetricsCollector
 
+def restricted_registry(self, names):
+    names = set(names)
+    collectors = set()
+    metrics = []
+    with self._lock:
+        if 'target_info' in names and self._target_info:
+            metrics.append(self._target_info_metric())
+            names.remove('target_info')
+        for name in names:
+            if name in self._names_to_collectors:
+                collectors.add(self._names_to_collectors[name])
+    for collector in collectors:
+        for metric in collector.collect():
+            metrics.append(metric)
+
+    class RestrictedRegistry(object):
+        def collect(self):
+            return metrics
+
+    return RestrictedRegistry()
+        
+
+# Monkey patch restricted_registry
+CollectorRegistry.restricted_registry = restricted_registry
 
 # Enable dumps on stderr in case of segfault
 faulthandler.enable()
@@ -34,21 +58,12 @@ class SignalHandler():
         logger.info("Exporter is shutting down")
         self.shutdown = True
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def main():
     parser = argparse.ArgumentParser(description='BT clients stats exporter.')
     parser.add_argument('-c', '--config', help='The path to config file', default='/config/config.yml')
     parser.add_argument('-p', '--port', type=int, help='The port to use', default=9000)
-    parser.add_argument('--multi', type=str2bool, help='Use different ports for each exporter')
+    parser.add_argument('--multi', action="store_true", help='Use different ports for each exporter')
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
