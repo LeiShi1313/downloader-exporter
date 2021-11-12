@@ -31,6 +31,18 @@ Add this to your prometheus.yml
 
 ### The exporter is running too slow
 
+#### Use params
+
+You can use params to collector metrics from one or more downloaders as you chose, for example
+```
+curl localhost:9000/metrics?name[]=qb1
+```
+Will only fetch downloader named qb1 in your config.
+
+Then you can use [multi-target-exporter](https://prometheus.io/docs/guides/multi-target-exporter/) to config your prometheus.
+
+#### Use --multi
+
 You can use an options to expose multiple ports for each downloader you're watching. Then the exporter will open a range of ports starting from the one you set, each port for each downloader
 
 With command line
