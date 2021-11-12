@@ -133,7 +133,7 @@ class DelugeMetricsCollector:
             client,
             "core.get_torrents_status",
             {},
-            ["state", "label", "tracker", "total_uploaded", "name"],
+            ["state", "label", "tracker", "total_uploaded", "all_time_download", "name"],
         )
         if not torrents:
             return []
@@ -159,6 +159,18 @@ class DelugeMetricsCollector:
                         "tracker": tracker,
                     },
                     "help": f"Data uploaded to tracker {tracker} for torrent {torrent_name}",
+                }
+            )
+            metrics.append(
+                {
+                    "name": "downloader_tracker_torrent_download_bytes_total",
+                    "type": "counter",
+                    "value": val.get("all_time_download", 0.0),
+                    "labels": {
+                        "torrent_name": torrent_name,
+                        "tracker": tracker,
+                    },
+                    "help": f"Data downloaded to tracker {tracker} for torrent {torrent_name}",
                 }
             )
 

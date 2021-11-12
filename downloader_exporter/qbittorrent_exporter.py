@@ -160,6 +160,18 @@ class QbittorrentMetricsCollector:
                     "help": f"Data uploaded to tracker {tracker} for torrent {torrent_name}",
                 }
             )
+            metrics.append(
+                {
+                    "name": "downloader_tracker_torrent_download_bytes_total",
+                    "type": "counter",
+                    "value": torrent.get("downloaded", 0.0),
+                    "labels": {
+                        "torrent_name": torrent_name,
+                        "tracker": tracker,
+                    },
+                    "help": f"Data downloaded to tracker {tracker} for torrent {torrent_name}",
+                }
+            )
 
         for t, count in counter.items():
             metrics.append(

@@ -128,6 +128,7 @@ class TransmissionMetricsCollector:
                     "isFinished",
                     "isStalled",
                     "uploadedEver",
+                    "downloadedEver",
                 ]
             )
         except Exception as e:
@@ -166,6 +167,18 @@ class TransmissionMetricsCollector:
                         "tracker": tracker,
                     },
                     "help": f"Data uploaded to tracker {tracker} for torrent {t.name}",
+                }
+            )
+            metrics.append(
+                {
+                    "name": "downloader_tracker_torrent_download_bytes_total",
+                    "type": "counter",
+                    "value": t._fields["downloadedEver"].value,
+                    "labels": {
+                        "torrent_name": t.name,
+                        "tracker": tracker,
+                    },
+                    "help": f"Data downloaded to tracker {tracker} for torrent {t.name}",
                 }
             )
 
