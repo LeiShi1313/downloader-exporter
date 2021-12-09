@@ -57,7 +57,7 @@ class TransmissionMetricsCollector:
                 **{
                     "name": self.name,
                     "version": self.version,
-                    "client": "deluge",
+                    "client": "transmission",
                     "host": self.host,
                 },
             }
