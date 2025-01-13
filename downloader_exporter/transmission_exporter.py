@@ -78,9 +78,10 @@ class TransmissionMetricsCollector:
 
     def get_status_metrics(self):
         try:
-            session = self.client.session_stats()
+            session = self.client.get_session()
+            session_stats = self.client.session_stats()
             self.version = session.version
-            stat = session.cumulative_stats
+            stat = session_stats.cumulative_stats
         except Exception as e:
             logger.error(f"[{self.name}] Can not get client session: {e}")
             self.version = ""

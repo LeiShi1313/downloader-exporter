@@ -28,7 +28,6 @@ except ImportError:
 
 import yaml
 from loguru import logger
-from attrdict import AttrDict
 from prometheus_client import start_http_server, Metric, generate_latest, CONTENT_TYPE_LATEST, make_wsgi_app as old_make_wsgi_app
 from prometheus_client.core import REGISTRY, CollectorRegistry
 from prometheus_client.openmetrics import exposition as openmetrics

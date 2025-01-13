@@ -55,6 +55,26 @@ With docker
 docker run -d -v CONFIG_FILE_PATH:/config/config.yml -e EXPORTER_PORT=9000 -e USE_MULTI_PORTS=true -p 9000-9010:9000-9010 leishi1313/downloader-exporter
 ```
 
+### How to connect to Deluge
+
+Deluge uses three ports for different operations:
+
+1. Incoming Port: Used by other torrent clients to connect to your instance.
+2. WebUI Port: Used to access the Deluge WebUI.
+3. **Daemon Port**: The one we need, this port is typically 58846, but you can confirm it by navigating to `Preferences -> Daemon` in the Deluge WebUI.
+
+To connect to the daemon, you'll need the daemon username and password. These credentials are stored in a file named `auth`, located in Deluge's config folder. You can view the file's contents using the following command:
+
+```shell
+root@f80e4787ec08: cat /config/auth
+localclient:011cc7842dc8ad50f165ab712a8ef110e06fd7c0:10
+```
+
+In this example you can use `localclient` as user and `011cc7842dc8ad50f165ab712a8ef110e06fd7c0` as password to connect.
+It's always different on your machine and you can add your choice of user/password by following the existing pattern.
+Check more at [Deluge Authentication](https://deluge-torrent.org/userguide/authentication/)
+
+
 # Config file
 
 The config file is compatible with [autoremove-torrents](https://github.com/jerrymakesjelly/autoremove-torrents), you can also refer to `example.yml` to see how to write it.
@@ -72,6 +92,6 @@ docker-compose up -d
 
 Use `localhost:3000` and `admin`/`admin` to access the dashboard.
 
-First you will need to add a data source, select `Prometheus` with URL `prometheus:9090`, Then go and add a new dashboard with ID `15006`, the dashboard should look like
+First you will need to add a data source, select `Prometheus` with URL `prometheus:9090`, Then go and add a new dashboard with ID `15006` (use `22677` for English version), the dashboard should look like
 
 ![](./grafana/screenshot.jpg)
