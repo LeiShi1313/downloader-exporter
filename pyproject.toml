@@ -1,0 +1,35 @@
+[project]
+name = "downloader-exporter"
+version = "0.5.2"
+description = "Prometheus exporter for torrent downloader like qbittorrent/transmission/deluge"
+readme = "README.md"
+authors = [
+    {name = "Lei Shi", email = "me@leishi.io"},
+]
+dependencies = [
+    "attrdict==2.0.1",
+    "deluge-client==1.10.2",
+    "loguru==0.7.3",
+    "prometheus_client==0.21.1",
+    "pyyaml==6.0.2",
+    "qbittorrent-api==2024.12.71",
+    "transmission-rpc==7.0.11",
+]
+requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["prometheus", "qbittorrent", "transmission", "deluge"]
+classifiers = []
+
+[project.urls]
+Homepage = "https://github.com/leishi1313/downloader-exporter"
+Downloads = "https://github.com/leishi1313/downloader-exporter/releases/latest"
+
+[project.scripts]
+downloader-exporter = "downloader_exporter.exporter:main"
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true

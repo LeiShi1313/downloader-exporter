@@ -142,15 +142,15 @@ class TransmissionMetricsCollector:
             tracker = urlparse(
                 next(
                     (
-                        t.get("announce", "https://unknown.tracker")
-                        for t in t._fields["trackerStats"].value
+                        _t.get("announce", "https://unknown.tracker")
+                        for _t in t.fields["trackerStats"]
                     ),
                     "https://unknown.tracker",
                 )
             ).netloc
             category = "Uncategorized"
-            if "labels" in t._fields:
-                category = next((l for l in t._fields["labels"].value), "Uncategorized")
+            if "labels" in t.fields:
+                category = next((l for l in t.fields["labels"]), "Uncategorized")
             counter[
                 TorrentStat(
                     TorrentStatus.parse_tr(t.status).value,
@@ -162,7 +162,7 @@ class TransmissionMetricsCollector:
                 {
                     "name": "downloader_tracker_torrent_upload_bytes_total",
                     "type": "counter",
-                    "value": t._fields["uploadedEver"].value,
+                    "value": t.fields["uploadedEver"],
                     "labels": {
                         "torrent_name": t.name,
                         "tracker": tracker,
@@ -174,7 +174,7 @@ class TransmissionMetricsCollector:
                 {
                     "name": "downloader_tracker_torrent_download_bytes_total",
                     "type": "counter",
-                    "value": t._fields["downloadedEver"].value,
+                    "value": t.fields["downloadedEver"],
                     "labels": {
                         "torrent_name": t.name,
                         "tracker": tracker,

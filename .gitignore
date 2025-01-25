@@ -128,5 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# PDM
+.pdm-python
+
 .vscode
 config*.yml
