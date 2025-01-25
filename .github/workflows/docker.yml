@@ -8,22 +8,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout GitHub Action'
+      - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Set up QEMU (for cross-platform builds)
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Extract branch name
+        id: extract_branch
         shell: bash
         run: |
           tag=${GITHUB_REF#refs/tags/}
           tag=${tag#refs/heads/}
-          if echo $tag | grep -q -E "[0-9]+\.[0-9]+\.[0-9]+"; then
+          # If tag matches a semantic version, prepend 'v'
+          if echo "$tag" | grep -qE "[0-9]+\.[0-9]+\.[0-9]+"; then
             tag="v$tag"
           fi
           echo "##[set-output name=tag;]$tag"
-        id: extract_branch
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -31,8 +35,11 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Build and push docker
+      - name: Build and push Docker images
         uses: docker/build-push-action@v2
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
-          tags: leishi1313/downloader-exporter:latest,leishi1313/downloader-exporter:${{ steps.extract_branch.outputs.tag }}
+          tags: |
+            leishi1313/downloader-exporter:latest
+            leishi1313/downloader-exporter:${{ steps.extract_branch.outputs.tag }}
