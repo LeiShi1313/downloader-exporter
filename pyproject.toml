@@ -1,6 +1,6 @@
 [project]
 name = "downloader-exporter"
-version = "0.5.2"
+dynamic = ["version"]
 description = "Prometheus exporter for torrent downloader like qbittorrent/transmission/deluge"
 readme = "README.md"
 authors = [
@@ -30,6 +30,8 @@ downloader-exporter = "downloader_exporter.exporter:main"
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-
 [tool.pdm]
 distribution = true
+
+[tool.pdm.version]
+source = "scm"
