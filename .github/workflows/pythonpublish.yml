@@ -19,4 +19,6 @@ jobs:
       - uses: pdm-project/setup-pdm@v4
 
       - name: Publish package distributions to PyPI
+        env:
+          PDM_BUILD_SCM_VERSION: ${{ github.event.release.tag_name }}
         run: pdm publish
